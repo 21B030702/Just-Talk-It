@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from rest_framework import viewsets, filters
-from .models import Category, Course, Enrollment, Teacher, Review, Event, Service, KnowledgeBaseArticle, FAQ, ContactMessage
+from .models import Category, Course, Enrollment, Teacher, Review, Event, Service, KnowledgeBaseArticle, FAQ, ContactMessage, Payment
 from .serializers import CategorySerializer, CourseSerializer, EnrollmentSerializer, TeacherSerializer, ReviewSerializer, EventSerializer, ServiceSerializer, KnowledgeBaseArticleSerializer, FAQSerializer
 from django.contrib.auth.models import User
 from rest_framework.decorators import api_view
@@ -8,7 +8,76 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework import filters
+import stripe
+from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from rest_framework.decorators import permission_classes
+from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
 
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_payment(request):
+    user = request.user
+    if not user.is_authenticated:
+        return Response({"error": "User must be authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    course_id = request.data.get('course_id')
+    try:
+        course = Course.objects.get(id=course_id)
+    except Course.DoesNotExist:
+        return Response({"error": "Course not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    # Найдем выбранный курс
+    course = Course.objects.get(id=course_id)
+
+    # Создаем платежное намерение (PaymentIntent) в Stripe
+    intent = stripe.PaymentIntent.create(
+        amount=int(course.price * 100),  # Stripe работает с центами
+        currency='usd',
+        metadata={'course_id': course.id, 'user_id': user.id},
+    )
+
+    # Создаем запись о платеже в базе данных
+    payment = Payment.objects.create(
+        user=user,
+        course=course,
+        amount=course.price,
+        stripe_payment_intent=intent['id'],
+    )
+
+    return Response({
+        'client_secret': intent['client_secret']
+    })
+
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META['HTTP_STRIPE_SIGNATURE']
+    endpoint_secret = 'your-webhook-secret'
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, endpoint_secret
+        )
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    except stripe.error.SignatureVerificationError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+    # Обработка события подтверждения оплаты
+    if event['type'] == 'payment_intent.succeeded':
+        payment_intent = event['data']['object']
+        stripe_payment_id = payment_intent['id']
+        # Обновляем статус платежа в базе данных
+        payment = Payment.objects.get(stripe_payment_intent=stripe_payment_id)
+        payment.status = 'succeeded'
+        payment.save()
+
+    return JsonResponse({'status': 'success'})
 
 @api_view(['POST'])
 def register_user(request):
@@ -32,11 +101,13 @@ def home(request):
     return render(request, 'main/home.html', {'courses': courses, 'teachers': teachers})
 
 class CategoryViewSet(viewsets.ModelViewSet):
-    queryset = Category.objects.all()
+    queryset = Category.objects.Category.objects.prefetch_related('course_set')
     serializer_class = CategorySerializer
 
+@method_decorator(cache_page(60 * 15), name='dispatch')  # Кэширование на 15 минут
 class CourseViewSet(viewsets.ModelViewSet):
-    queryset = Course.objects.all()
+    queryset = Course.objects.select_related('category', 'instructor') \
+                             .prefetch_related('students')
     serializer_class = CourseSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'description']
