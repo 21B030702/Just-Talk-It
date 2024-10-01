@@ -1,7 +1,6 @@
 from rest_framework.test import APITestCase
 from django.urls import reverse
 from django.test import TestCase, Client
-from django.urls import reverse
 from django.contrib.auth.models import User
 from .models import Course, Enrollment, Payment
 from unittest.mock import patch
@@ -9,11 +8,14 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from django.core.mail import send_mail
 
+
+# Тесты для курса
 class CourseAPITest(APITestCase):
     def test_get_courses(self):
         url = reverse('course-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
+
 
 # Тесты для платёжной системы
 class PaymentTests(TestCase):
@@ -37,7 +39,7 @@ class PaymentTests(TestCase):
         mock_create_payment.return_value = {'id': 'pi_test_123', 'client_secret': 'test_secret'}
 
         # Выполняем запрос создания платежа
-        response = self.client.post(reverse('create-payment'), {'course_id': self.course.id})
+        response = self.client.post(reverse('create_payment'), {'course_id': self.course.id})
         self.assertEqual(response.status_code, 200)
         self.assertIn('client_secret', response.json())
 
@@ -57,11 +59,11 @@ class SignalTests(TestCase):
             instructor=self.user
         )
 
-    @patch('courses.signals.send_mail')
+    @patch('django.core.mail.send_mail')
     def test_enrollment_confirmation_email(self, mock_send_mail):
         # Создание записи на курс
-        enrollment = Enrollment.objects.create(student=self.user, course=self.course, status='confirmed')
-        
+        Enrollment.objects.create(student=self.user, course=self.course, status='confirmed')
+
         self.assertTrue(mock_send_mail.called, "send_mail was not called")
         mock_send_mail.assert_called_once_with(
             subject='Enrollment Confirmed',
@@ -70,11 +72,11 @@ class SignalTests(TestCase):
             recipient_list=[self.user.email]
         )
 
-    @patch('courses.signals.send_mail')
+    @patch('django.core.mail.send_mail')
     def test_payment_confirmation_email(self, mock_send_mail):
         # Создание записи платежа
-        payment = Payment.objects.create(user=self.user, course=self.course, amount=100.00, stripe_payment_intent='pi_test_123', status='succeeded')
-        
+        Payment.objects.create(user=self.user, course=self.course, amount=100.00, stripe_payment_intent='pi_test_123', status='succeeded')
+
         self.assertTrue(mock_send_mail.called, "send_mail was not called")
         mock_send_mail.assert_called_once_with(
             subject='Payment Successful',
@@ -82,6 +84,7 @@ class SignalTests(TestCase):
             from_email='test@example.com',
             recipient_list=[self.user.email]
         )
+
 
 # Тесты для middleware логирования
 import logging

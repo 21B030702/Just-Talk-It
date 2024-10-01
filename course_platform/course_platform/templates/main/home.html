@@ -1,58 +1,68 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home - Course Platform</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Home - Course Platform</title>
+	{% load static %}
+	<link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
+
 <body>
 
-    <header>
-        <h1>Welcome to the Course Platform</h1>
-        <nav>
-            <ul>
-                <li><a href="/">Home</a></li>
-                <li><a href="/courses/">Courses</a></li>
-                <li><a href="/teachers/">Teachers</a></li>
-                <li><a href="/contact/">Contact</a></li>
-            </ul>
-        </nav>
-    </header>
+	<header>
+		<h1>Welcome to the Course Platform</h1>
+		<nav>
+			<ul>
+				<li><a href="/">Home</a></li>
+				<li><a href="/courses/">Courses</a></li>
+				<li><a href="/teachers/">Teachers</a></li>
+				<li><a href="/contact/">Contact</a></li>
+			</ul>
+		</nav>
+	</header>
 
-    <main>
-        <section>
-            <h2>Available Courses</h2>
-            <ul>
-                {% for course in courses %}
-                    <li>
-                        <h3>{{ course.title }}</h3>
-                        <p>Category: {{ course.category.name }}</p>
-                        <p>Instructor: {{ course.instructor.name }}</p>
-                        <p>Price: ${{ course.price }}</p>
-                    </li>
-                {% empty %}
-                    <li>No courses available at the moment.</li>
-                {% endfor %}
-            </ul>
-        </section>
+	<main>
+		<section>
+			<h2>Available Courses</h2>
+			<ul>
+				{% if courses %}
+					{% for course in courses %}
+						<li>
+							<h3>{{ course.title }}</h3>
+							<p>{{ course.description }}</p>
+							<p>Price: ${{ course.price }}</p>
+						</li>
+					{% endfor %}
+				{% else %}
+					<li>No courses available at the moment.</li>
+				{% endif %}
+			</ul>
+		</section>
 
-        <section>
-            <h2>Our Teachers</h2>
-            <ul>
-                {% for teacher in teachers %}
-                    <li>{{ teacher.name }} - {{ teacher.specialization }}</li>
-                {% empty %}
-                    <li>No teachers available.</li>
-                {% endfor %}
-            </ul>
-        </section>
-    </main>
+		<section>
+			<h2>Our Teachers</h2>
+			<ul>
+				{% if teachers %}
+					{% for teacher in teachers %}
+						<li>
+							<h3>{{ teacher.name }}</h3>
+							<p>{{ teacher.bio }}</p>
+						</li>
+					{% endfor %}
+				{% else %}
+					<li>No teachers available.</li>
+				{% endif %}
+			</ul>
+		</section>
+	</main>
 
-    <footer>
-        <p>&copy; 2024 Course Platform. All rights reserved.</p>
-    </footer>
+	<footer>
+		<p>&copy; 2024 Course Platform. All rights reserved.</p>
+	</footer>
 
 </body>
+
 </html>

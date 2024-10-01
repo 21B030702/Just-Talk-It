@@ -1,0 +1,40 @@
+<!-- blog.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog - Course Platform</title>
+    <link rel="stylesheet" href="/static/css/blog.css">  <!-- Подключение CSS-стилей, если они у вас есть -->
+</head>
+<body>
+    <header>
+        <h1>Our Blog</h1>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/courses/">Courses</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="/blog/">Blog</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <h2>Recent Blog Posts</h2>
+        <ul>
+            {% for post in posts %}
+                <li>
+                    <h3>{{ post.title }}</h3>
+                    <p>{{ post.content|truncatewords:30 }}</p>
+                    <a href="#">Read More</a>
+                </li>
+            {% endfor %}
+        </ul>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Course Platform. All rights reserved.</p>
+    </footer>
+</body>
+</html>
